@@ -1,10 +1,10 @@
-import docx
+import os
+import random
+import xml.etree.ElementTree as ET
+
 from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.styles import CT_Style
-import xml.etree.ElementTree as ET
-import os
-import random
 
 NS = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 
@@ -197,6 +197,13 @@ def handle_styles(merged_doc, sub_doc):
         if isinstance(s, CT_Style):
             merged_doc_styles.append(s)
 
+    for merged_section, sub_section in zip(merged_doc.sections, sub_doc.sections):
+        # 상하좌우 여백 중 작은 값을 merged_doc에 설정
+        merged_section.top_margin = min(merged_section.top_margin, sub_section.top_margin)
+        merged_section.bottom_margin = min(merged_section.bottom_margin, sub_section.bottom_margin)
+        merged_section.left_margin = min(merged_section.left_margin, sub_section.left_margin)
+        merged_section.right_margin = min(merged_section.right_margin, sub_section.right_margin)
+
 
 def add_page_break(doc):
     # <w:p> element 생성
@@ -222,11 +229,11 @@ def add_page_break(doc):
 def check_page_break(xml_text):
     root = ET.fromstring(xml_text)
 
-    # 모든 하위 태그 중에서 <w:br w:type="page"> 또는 <Renderpagebreak>를 찾은 후 있을 경우 리턴
+    # 모든 하위 태그 중에서 (<w:br w:type="page"> 또는) <Renderpagebreak>를 찾은 후 있을 경우 리턴
     for child in root.iter():
-        if child.tag == '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}br' and child.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type') == 'page':
-            return True
-        elif child.tag == '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}lastRenderedPageBreak':
+        #if child.tag == '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}br' and child.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type') == 'page':
+        #    return True
+        if child.tag == '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}lastRenderedPageBreak':
             return True
 
     return False
@@ -235,21 +242,38 @@ def check_page_break(xml_text):
 
 def merge_docx(file_list, file_name):
     merged_doc = Document()
+    selected_pages = []
 
     for file in file_list:
         sub_doc = Document(file)
+        page_number = 1
+        user_input = input("저장할 페이지 번호를 입력하세요 (여러 페이지일 경우 쉼표로 구분, 전체 페이지를 저장할 경우 엔터키를 누르세요): ")
+        if user_input:
+            selected_pages = [int(num) for num in user_input.split(',')]
+            if len(selected_pages) != len(set(selected_pages)):
+                print("중복된 페이지 번호가 있습니다.")
+        # 원하는 페이지가 없을 경우
+        else:
+            print("페이지를 저장하지 않았습니다.")
+
+
+
+        print(f"{file} 저장 중..")
         # 인라인 이미지 처리
         handle_inlines(merged_doc, sub_doc)
         # 스타일 처리
         handle_styles(merged_doc, sub_doc)
-
+        # 넘버링 처리
         handle_numbers(merged_doc, sub_doc)
 
         # sub_doc_doc의 body 엘리먼트를 merged_doc 파일의 body에 추가
         for element in sub_doc.element.body:
             if check_page_break(element.xml):
-                print("Page break")
-            merged_doc.element.body.append(element)
+                page_number = page_number + 1
+            if page_number in selected_pages:
+                merged_doc.element.body.append(element)
+            elif not selected_pages:
+                merged_doc.element.body.append(element)
 
         # 수동으로 페이지 구분선 추가
         add_page_break(merged_doc)
@@ -257,6 +281,29 @@ def merge_docx(file_list, file_name):
     # 문서 저장
     merged_doc.save(file_name)
 
+def file_load(file_list):
+    # 사용자가 원하는 파일 불러오기
+    path = "./"
+    dirPath = os.listdir(path)
+    print(dirPath)
 
-file_list = ['docx_sample/test1.docx', 'docx_sample/test2.docx']
-merge_docx(file_list, 'docx_sample/output.docx')
+    while True:
+        file_name = input("불러올 파일명(.docx)을 입력하세요[exit 입력 시 나감]: ")
+        if not file_name.endswith(".docx"):
+            print("올바른 형식이 아닙니다.")
+        if file_name == "exit":
+            break
+        else:
+            file_list.append(file_name)
+
+    # 불러온 파일 확인
+    for file in file_list:
+        print(file)
+
+
+# file_load(file_list)
+file_list = [r'C:\Users\서예은\Desktop\문서 통합\Python\code\신청서.docx',r'C:\Users\서예은\Desktop\문서 통합\Python\code\설문지.docx']
+merge_docx(file_list, 'output.docx')
+
+# file_list = ['docx_sample/test1.docx', 'docx_sample/test2.docx']
+# merge_docx(file_list, 'docx_sample/output.docx')
