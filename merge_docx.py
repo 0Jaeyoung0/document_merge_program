@@ -238,8 +238,6 @@ def check_page_break(xml_text):
 
     return False
 
-
-
 def merge_docx(file_list, file_name):
     merged_doc = Document()
     selected_pages = []
@@ -266,7 +264,7 @@ def merge_docx(file_list, file_name):
         # 넘버링 처리
         handle_numbers(merged_doc, sub_doc)
 
-        # sub_doc_doc의 body 엘리먼트를 merged_doc 파일의 body에 추가
+        # sub_doc의 body 엘리먼트를 merged_doc 파일의 body에 추가
         for element in sub_doc.element.body:
             if check_page_break(element.xml):
                 page_number = page_number + 1
