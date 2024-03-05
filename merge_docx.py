@@ -243,11 +243,12 @@ def check_page_break(xml_text):
 def merge_docx(file_list, file_name):
     merged_doc = Document()
     selected_pages = []
-
+    sub_doc = Document()
     for file in file_list:
         sub_doc = Document(file)
         page_number = 1
-        user_input = input("저장할 페이지 번호를 입력하세요 (여러 페이지일 경우 쉼표로 구분, 전체 페이지를 저장할 경우 엔터키를 누르세요): ")
+        load_file = os.path.basename(file)
+        user_input = input(f"{load_file}의 저장할 페이지 번호를 입력하세요 (여러 페이지일 경우 쉼표로 구분, 전체 페이지를 저장할 경우 엔터키를 누르세요): ")
         if user_input:
             selected_pages = [int(num) for num in user_input.split(',')]
             if len(selected_pages) != len(set(selected_pages)):
@@ -270,13 +271,14 @@ def merge_docx(file_list, file_name):
         for element in sub_doc.element.body:
             if check_page_break(element.xml):
                 page_number = page_number + 1
-            if page_number in selected_pages:
-                merged_doc.element.body.append(element)
             elif not selected_pages:
                 merged_doc.element.body.append(element)
+            if page_number in selected_pages:
+                merged_doc.element.body.append(element)
+
 
         # 수동으로 페이지 구분선 추가
-        add_page_break(merged_doc)
+        #add_page_break(merged_doc)
 
     # 문서 저장
     merged_doc.save(file_name)
@@ -302,8 +304,9 @@ def file_load(file_list):
 
 
 # file_load(file_list)
-file_list = [r'C:\Users\서예은\Desktop\문서 통합\Python\code\신청서.docx',r'C:\Users\서예은\Desktop\문서 통합\Python\code\설문지.docx']
-merge_docx(file_list, 'output.docx')
+
+file_list = [r'C:\Users\서예은\Downloads\소프트웨어.docx',r'C:\Users\서예은\Desktop\문서 통합\Python\code\신청서.docx',r'C:\Users\서예은\Desktop\문서 통합\Python\code\설문지.docx']
+merge_docx(file_list, 'asdjlkf.docx')
 
 # file_list = ['docx_sample/test1.docx', 'docx_sample/test2.docx']
 # merge_docx(file_list, 'docx_sample/output.docx')
