@@ -238,7 +238,7 @@ def check_page_break(xml_text):
 
     return False
 
-def merge_docx(file_list, file_name):
+def merge_docx(file_list, output_file_name):
     merged_doc = Document()
     selected_pages = []
 
@@ -277,31 +277,4 @@ def merge_docx(file_list, file_name):
         add_page_break(merged_doc)
 
     # 문서 저장
-    merged_doc.save(file_name)
-
-def file_load(file_list):
-    # 사용자가 원하는 파일 불러오기
-    path = "./"
-    dirPath = os.listdir(path)
-    print(dirPath)
-
-    while True:
-        file_name = input("불러올 파일명(.docx)을 입력하세요[exit 입력 시 나감]: ")
-        if not file_name.endswith(".docx"):
-            print("올바른 형식이 아닙니다.")
-        if file_name == "exit":
-            break
-        else:
-            file_list.append(file_name)
-
-    # 불러온 파일 확인
-    for file in file_list:
-        print(file)
-
-
-# file_load(file_list)
-file_list = [r'C:\Users\서예은\Desktop\문서 통합\Python\code\신청서.docx',r'C:\Users\서예은\Desktop\문서 통합\Python\code\설문지.docx']
-merge_docx(file_list, 'output.docx')
-
-# file_list = ['docx_sample/test1.docx', 'docx_sample/test2.docx']
-# merge_docx(file_list, 'docx_sample/output.docx')
+    merged_doc.save(output_file_name)
