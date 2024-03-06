@@ -5,6 +5,8 @@ import xml.etree.ElementTree as ET
 from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.styles import CT_Style
+from docx.oxml.ns import nsdecls
+from docx.oxml import parse_xml
 
 NS = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 
@@ -238,8 +240,6 @@ def check_page_break(xml_text):
 
     return False
 
-
-
 def merge_docx(file_list, file_name):
     merged_doc = Document()
     selected_pages = []
@@ -260,6 +260,7 @@ def merge_docx(file_list, file_name):
 
 
         print(f"{file} 저장 중..")
+
         # 인라인 이미지 처리
         handle_inlines(merged_doc, sub_doc)
         # 스타일 처리
@@ -272,13 +273,16 @@ def merge_docx(file_list, file_name):
             if check_page_break(element.xml):
                 page_number = page_number + 1
             elif not selected_pages:
+
                 merged_doc.element.body.append(element)
             if page_number in selected_pages:
                 merged_doc.element.body.append(element)
 
 
-        # 수동으로 페이지 구분선 추가
-        #add_page_break(merged_doc)
+
+        # 마지막 element가 페이지 구분선이 아니라면 수동으로 페이지 구분선 추가
+        if not check_page_break(merged_doc.element.body[-1].xml):
+            add_page_break(merged_doc)
 
     # 문서 저장
     merged_doc.save(file_name)
@@ -305,8 +309,8 @@ def file_load(file_list):
 
 # file_load(file_list)
 
-file_list = [r'C:\Users\서예은\Downloads\소프트웨어.docx',r'C:\Users\서예은\Desktop\문서 통합\Python\code\신청서.docx',r'C:\Users\서예은\Desktop\문서 통합\Python\code\설문지.docx']
-merge_docx(file_list, 'asdjlkf.docx')
+file_list = [r'C:\Users\서예은\Desktop\문서 통합\Python\code\신청서.docx', r'C:\Users\서예은\Desktop\문서 통합\Python\code\설문지.docx', r'C:\Users\서예은\Downloads\소프트웨어.docx']
+merge_docx(file_list, 'output.docx')
 
 # file_list = ['docx_sample/test1.docx', 'docx_sample/test2.docx']
 # merge_docx(file_list, 'docx_sample/output.docx')
