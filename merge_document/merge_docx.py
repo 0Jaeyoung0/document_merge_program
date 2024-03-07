@@ -262,6 +262,29 @@ def check_page_break(xml_text):
     return False
 
 
+# 수정 중..
+def handle_images(merged_doc, element):
+    if 'graphicData' in element.xml:  # 이미지를 포함한 element를 찾습니다.
+        # 이미지 데이터를 가져옵니다.
+        image_data = element._element.xpath('.//pic:blipFill/a:blip', namespaces=nsdecls('pic', 'a'))[0].attrib[
+            '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed']
+
+        # 이미지를 merged_doc에 추가합니다.
+        # 이 예제에서는 'media' 폴더 안에 있는 이미지 파일을 추가합니다.
+        # 실제로는 원하는 이미지 파일 경로를 지정해야 합니다.
+        image_path = 'media/' + image_data + '.png'
+        new_image = merged_doc.add_picture(image_path)
+
+        # 새로 추가한 이미지의 rId를 가져옵니다.
+        new_rId = new_image._element.get('rId')
+
+        # 원래의 element에 새로운 이미지를 추가합니다.
+        blip = parse_xml(
+            r'<a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="{}"/>'.format(
+                new_rId))
+        element._element.xpath('.//pic:blipFill/a:blip', namespaces=nsdecls('pic', 'a'))[0].getparent().replace(
+        element._element.xpath('.//pic:blipFill/a:blip', namespaces=nsdecls('pic', 'a'))[0], blip)
+
 
 def merge_docx(file_list, file_name):
     merged_doc = Document()
