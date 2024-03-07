@@ -134,31 +134,14 @@ def handle_inlines(merged_doc, sub_doc):
     x_path = '//a:blip'
     # sub_doc 문서의 모든 a:blip 엘리먼트를 blip_list 변수에 저장
     blip_list = sub_doc.element.xpath(x_path)
+    # shapes 파일의 이미지를 모두 들어 있음
 
-    # shapes 변수에는 관심 있는 미디어를 가진 모든 InlineShape 객체가 들어 있음
-    shapes = sub_doc.inline_shapes
+    shapes = sub_doc.inline_shapes.part.package.image_parts._image_parts
 
-    # 각 이미지를 고유한 파일 경로로 저장
     for i in range(len(shapes)):
-
-        # rId를 가져오기
         shape = shapes[i]
-        if shape._inline.graphic.graphicData.pic is not None:
-            rId = shape._inline.graphic.graphicData.pic.blipFill.blip.embed
-        else:
-            # 해당 shape를 제거
-            drawing_element = shape._inline.getparent()
-            drawing_parent = drawing_element.getparent()
-            drawing_parent.remove(drawing_element)
-            continue
-
-        # ImagePart 객체
-        image_part = sub_doc.part.related_parts[rId]
-
-        # Image 객체
+        image_part = shape
         actual_image = image_part.image
-
-        # 이미지의 실제 바이너리 데이터
         image_blob = actual_image.blob
 
         # 고유한 파일 경로 문자열 생성
@@ -182,6 +165,46 @@ def handle_inlines(merged_doc, sub_doc):
         # 이미지 파일 제거
         os.remove(image_path)
 
+
+'''
+    [ 수정 후 ]
+    shapes = sub_doc.inline_shapes.part.package.image_parts._image_parts
+    for i in range(len(shapes)):
+
+        shape = shapes[i]
+        image_part = shape
+        actual_image = image_part.image
+        image_blob = actual_image.blob
+
+        # 고유한 파일 경로 문자열 생성
+        random_id = random.randint(10000, 100000)
+        image_path = 'image' + str(random_id) + '.' + actual_image.ext
+ 
+    [ 수정 전 ]
+    # shapes 변수에는 관심 있는 미디어를 가진 모든 InlineShape 객체가 들어 있음
+    shapes = sub_doc.inline_shapes
+    # 각 이미지를 고유한 파일 경로로 저장
+    for i in range(len(shapes)):
+        # rId를 가져오기
+        shape = shapes[i]
+        if shape._inline.graphic.graphicData.pic is not None:
+            rId = shape._inline.graphic.graphicData.pic.blipFill.blip.embed
+        # else:
+        #     # 해당 shape를 제거
+        #     drawing_element = shape._inline.getparent()
+        #     drawing_parent = drawing_element.getparent()
+        #     drawing_parent.remove(drawing_element)
+        #      continue
+        # ImagePart 객체
+        image_part = sub_doc.part.related_parts[rId]
+        # Image 객체
+        actual_image = image_part.image
+        # 이미지의 실제 바이너리 데이터
+        image_blob = actual_image.blob
+        # 고유한 파일 경로 문자열 생성
+        random_id = random.randint(10000, 100000)
+        image_path = 'image' + str(random_id) + '.' + actual_image.ext
+'''
 
 # sub_doc 문서의 모든 스타일을 merged_doc의 'styles.xml' 파일에 추가하는 함수
 # 이미 존재하는 스타일은 덮어써짐
@@ -247,7 +270,9 @@ def merge_docx(file_list, file_name):
     for file in file_list:
         sub_doc = Document(file)
         page_number = 1
-        user_input = input("저장할 페이지 번호를 입력하세요 (여러 페이지일 경우 쉼표로 구분, 전체 페이지를 저장할 경우 엔터키를 누르세요): ")
+
+        load_file = os.path.basename(file)
+        user_input = input(f"{load_file}의 저장할 페이지 번호를 입력하세요 (여러 페이지일 경우 쉼표로 구분, 전체 페이지를 저장할 경우 엔터키를 누르세요): ")
         if user_input:
             selected_pages = [int(num) for num in user_input.split(',')]
             if len(selected_pages) != len(set(selected_pages)):
@@ -255,8 +280,6 @@ def merge_docx(file_list, file_name):
         # 원하는 페이지가 없을 경우
         else:
             print("페이지를 저장하지 않았습니다.")
-
-
 
         print(f"{file} 저장 중..")
         # 인라인 이미지 처리
@@ -275,35 +298,8 @@ def merge_docx(file_list, file_name):
             elif not selected_pages:
                 merged_doc.element.body.append(element)
 
-        # 수동으로 페이지 구분선 추가
-        add_page_break(merged_doc)
+        #add_page_break(merged_doc)
 
     # 문서 저장
     merged_doc.save(file_name)
 
-def file_load(file_list):
-    # 사용자가 원하는 파일 불러오기
-    path = "./"
-    dirPath = os.listdir(path)
-    print(dirPath)
-
-    while True:
-        file_name = input("불러올 파일명(.docx)을 입력하세요[exit 입력 시 나감]: ")
-        if not file_name.endswith(".docx"):
-            print("올바른 형식이 아닙니다.")
-        if file_name == "exit":
-            break
-        else:
-            file_list.append(file_name)
-
-    # 불러온 파일 확인
-    for file in file_list:
-        print(file)
-
-
-# file_load(file_list)
-file_list = [r'C:\Users\서예은\Desktop\문서 통합\Python\code\신청서.docx',r'C:\Users\서예은\Desktop\문서 통합\Python\code\설문지.docx']
-merge_docx(file_list, 'output.docx')
-
-# file_list = ['docx_sample/test1.docx', 'docx_sample/test2.docx']
-# merge_docx(file_list, 'docx_sample/output.docx')
