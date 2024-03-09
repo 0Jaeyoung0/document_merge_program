@@ -59,54 +59,65 @@ def copy_sheet_data(source_sheet, target_sheet, start_row=1):
             new_cell.alignment = copy(cell.alignment)
 
 
-def merge_xlsx_multi_sheet():
-    # 원본 워크북 로드
-    wb = load_workbook(filename="xlsx_sample/test2.xlsx")
-    ws = wb["참여학사조직"]
-
-    twb = load_workbook(filename="xlsx_sample/test1.xlsx")
-    tws = twb["창원대"]
-
+def merge_xlsx_multi_sheet(sheet_list, output_file_name):
     # 새로운 워크북 생성
-    newwb = Workbook()
-    newwb.remove(newwb.active)
-    newws1 = newwb.create_sheet("Page 1")
-    newws2 = newwb.create_sheet("Page 2")
+    new_wb = Workbook()
+    new_wb.remove(new_wb.active)
 
-    # 데이터 및 스타일 복사
-    copy_sheet_data(ws, newws1)
-    copy_sheet_data(tws, newws2)
+    page_num = 1
+
+    for file_info in sheet_list:
+        new_ws = new_wb.create_sheet("Page " + str(page_num))
+
+        file_name = file_info[0]
+        sheet_names = file_info[1:]
+
+        # 원본 워크북 로드
+        wb = load_workbook(filename=file_name)
+
+        for sheet_name in sheet_names:
+            # 원본 워크시트 로드
+            ws = wb[sheet_name]
+
+            # 데이터 및 스타일 복사
+            copy_sheet_data(ws, new_ws)
+
+            # 원본 워크북 닫기
+            wb.close()
+
+        page_num += 1
 
     # 새로운 워크북 저장
-    newwb.save("xlsx_sample/output_multi_sheet.xlsx")
+    new_wb.save(output_file_name)
+    new_wb.close()
 
-    # 원본 워크북과 새로운 워크북 닫기
-    wb.close()
-    newwb.close()
-
-def merge_xlsx_single_sheet():
-    # 원본 워크북 로드
-    wb = load_workbook(filename="xlsx_sample/test2.xlsx")
-    ws = wb["참여학사조직"]
-
-    twb = load_workbook(filename="xlsx_sample/test1.xlsx")
-    tws = twb["창원대"]
-
+def merge_xlsx_single_sheet(sheet_list, output_file_name):
     # 새로운 워크북 생성
-    newwb = Workbook()
-    newwb.remove(newwb.active)
-    newws = newwb.create_sheet("Page 1")
+    new_wb = Workbook()
+    new_wb.remove(new_wb.active)
+    new_ws = new_wb.create_sheet("Page 1")
 
-    # 데이터 및 스타일 복사
-    copy_sheet_data(ws, newws)
-    copy_sheet_data(tws, newws, newws.max_row + 2)
+    start_row = 1
+
+    for file_info in sheet_list:
+        file_name = file_info[0]
+        sheet_names = file_info[1:]
+
+        # 원본 워크북 로드
+        wb = load_workbook(filename=file_name)
+
+        for sheet_name in sheet_names:
+            # 원본 워크시트 로드
+            ws = wb[sheet_name]
+
+            # 데이터 및 스타일 복사
+            copy_sheet_data(ws, new_ws, start_row)
+
+            # 원본 워크북 닫기
+            wb.close()
+
+            start_row = new_ws.max_row + 2
 
     # 새로운 워크북 저장
-    newwb.save("xlsx_sample/output_single_sheet.xlsx")
-
-    # 원본 워크북과 새로운 워크북 닫기
-    wb.close()
-    newwb.close()
-
-merge_xlsx_multi_sheet()
-merge_xlsx_single_sheet()
+    new_wb.save(output_file_name)
+    new_wb.close()
