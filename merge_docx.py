@@ -8,8 +8,6 @@ import random
 
 NS = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 
-
-# 문서에서 모든 하이퍼링크를 제거합니다. 이는 부동 이미지가 있는 문서에서 오염되지 않은 docx 파일을 생성할 수 있게 합니다.
 def handle_numbers(merged_doc, sub):
     # merged_doc의 numbering.xml 파일 가져오기
     try:
