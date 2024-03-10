@@ -1,13 +1,15 @@
 import os
 import random
-import xml.etree.ElementTree as ET
 
+import xml.etree.ElementTree as ET
 from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.styles import CT_Style
-
+from docx.shared import Pt
 NS = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 
+
+from xml.etree.ElementTree import Element, SubElement
 
 # 문서에서 모든 하이퍼링크를 제거합니다. 이는 부동 이미지가 있는 문서에서 오염되지 않은 docx 파일을 생성할 수 있게 합니다.
 def handle_numbers(merged_doc, sub):
@@ -285,6 +287,20 @@ def handle_images(merged_doc, element):
         element._element.xpath('.//pic:blipFill/a:blip', namespaces=nsdecls('pic', 'a'))[0].getparent().replace(
         element._element.xpath('.//pic:blipFill/a:blip', namespaces=nsdecls('pic', 'a'))[0], blip)
 
+# 수정 중..
+def adjust_table_height(table_element, row_height):
+    """
+    테이블 내 모든 행의 높이를 조절하여 테이블의 전체 높이를 조정합니다.
+    """
+    ns = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+    for row in table_element.findall('.//w:tr', namespaces=ns):
+        trPr = row.find('w:trPr', namespaces=ns)
+        if trPr is None:
+            trPr = ET.SubElement(row, '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}trPr')
+        trHeight = ET.SubElement(trPr, '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}trHeight')
+        trHeight.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val', str(row_height))
+        trHeight.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}hRule', "atLeast")
+
 
 def merge_docx(file_list, file_name):
     merged_doc = Document()
@@ -317,10 +333,19 @@ def merge_docx(file_list, file_name):
             if check_page_break(element.xml):
                 page_number = page_number + 1
             if page_number in selected_pages:
+                if 'tbl' in element.tag:  # element가 테이블인 경우
+                    # 예시로 각 행의 높이를 500으로 설정
+                    adjust_table_height(element, 500)
                 merged_doc.element.body.append(element)
             elif not selected_pages:
+                if 'tbl' in element.tag:  # element가 테이블인 경우
+                    # 예시로 각 행의 높이를 500으로 설정
+                    adjust_table_height(element, 500)
                 merged_doc.element.body.append(element)
 
+    # 모든 단락에 대해 단락 뒤 간격을 0으로 설정
+    for paragraph in merged_doc.paragraphs:
+        paragraph.paragraph_format.space_after = Pt(0)
         #add_page_break(merged_doc)
 
     # 문서 저장
