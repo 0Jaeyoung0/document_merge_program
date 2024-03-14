@@ -10,6 +10,9 @@ NS = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 
 
 from xml.etree.ElementTree import Element, SubElement
+from docx.oxml import ns
+from docx.oxml.ns import nsdecls
+from docx.oxml import parse_xml
 
 # 문서에서 모든 하이퍼링크를 제거합니다. 이는 부동 이미지가 있는 문서에서 오염되지 않은 docx 파일을 생성할 수 있게 합니다.
 def handle_numbers(merged_doc, sub):
@@ -253,7 +256,6 @@ def add_page_break(doc):
 
 def check_page_break(xml_text):
     root = ET.fromstring(xml_text)
-
     # 모든 하위 태그 중에서 (<w:br w:type="page"> 또는) <Renderpagebreak>를 찾은 후 있을 경우 리턴
     for child in root.iter():
         #if child.tag == '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}br' and child.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type') == 'page':
@@ -264,48 +266,10 @@ def check_page_break(xml_text):
     return False
 
 
-# 수정 중..
-def handle_images(merged_doc, element):
-    if 'graphicData' in element.xml:  # 이미지를 포함한 element를 찾습니다.
-        # 이미지 데이터를 가져옵니다.
-        image_data = element._element.xpath('.//pic:blipFill/a:blip', namespaces=nsdecls('pic', 'a'))[0].attrib[
-            '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed']
-
-        # 이미지를 merged_doc에 추가합니다.
-        # 이 예제에서는 'media' 폴더 안에 있는 이미지 파일을 추가합니다.
-        # 실제로는 원하는 이미지 파일 경로를 지정해야 합니다.
-        image_path = 'media/' + image_data + '.png'
-        new_image = merged_doc.add_picture(image_path)
-
-        # 새로 추가한 이미지의 rId를 가져옵니다.
-        new_rId = new_image._element.get('rId')
-
-        # 원래의 element에 새로운 이미지를 추가합니다.
-        blip = parse_xml(
-            r'<a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="{}"/>'.format(
-                new_rId))
-        element._element.xpath('.//pic:blipFill/a:blip', namespaces=nsdecls('pic', 'a'))[0].getparent().replace(
-        element._element.xpath('.//pic:blipFill/a:blip', namespaces=nsdecls('pic', 'a'))[0], blip)
-
-# 수정 중..
-def adjust_table_height(table_element, row_height):
-    """
-    테이블 내 모든 행의 높이를 조절하여 테이블의 전체 높이를 조정합니다.
-    """
-    ns = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
-    for row in table_element.findall('.//w:tr', namespaces=ns):
-        trPr = row.find('w:trPr', namespaces=ns)
-        if trPr is None:
-            trPr = ET.SubElement(row, '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}trPr')
-        trHeight = ET.SubElement(trPr, '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}trHeight')
-        trHeight.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val', str(row_height))
-        trHeight.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}hRule', "atLeast")
-
 
 def merge_docx(file_list, file_name):
     merged_doc = Document()
     selected_pages = []
-
     for file in file_list:
         sub_doc = Document(file)
         page_number = 1
@@ -333,16 +297,11 @@ def merge_docx(file_list, file_name):
             if check_page_break(element.xml):
                 page_number = page_number + 1
             if page_number in selected_pages:
-                if 'tbl' in element.tag:  # element가 테이블인 경우
-                    # 예시로 각 행의 높이를 500으로 설정
-                    adjust_table_height(element, 500)
                 merged_doc.element.body.append(element)
             elif not selected_pages:
                 if 'tbl' in element.tag:  # element가 테이블인 경우
-                    # 예시로 각 행의 높이를 500으로 설정
-                    adjust_table_height(element, 500)
+                    print('hi')
                 merged_doc.element.body.append(element)
-
     # 모든 단락에 대해 단락 뒤 간격을 0으로 설정
     for paragraph in merged_doc.paragraphs:
         paragraph.paragraph_format.space_after = Pt(0)
