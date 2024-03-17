@@ -8,7 +8,6 @@ from docx.oxml.styles import CT_Style
 from docx.shared import Pt
 NS = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 
-
 from xml.etree.ElementTree import Element, SubElement
 from docx.oxml import ns
 from docx.oxml.ns import nsdecls
@@ -242,7 +241,7 @@ def add_page_break(doc):
 
     # <w:br w:type="page"/> element 생성
     br_element = OxmlElement('w:br')
-    br_element.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type', 'page')
+    #br_element.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type', 'page')
 
     # <w:r>에 <w:br> append
     run_element.append(br_element)
@@ -305,6 +304,19 @@ def merge_docx(file_list, file_name):
     # 모든 단락에 대해 단락 뒤 간격을 0으로 설정
     for paragraph in merged_doc.paragraphs:
         paragraph.paragraph_format.space_after = Pt(0)
+            # if check_page_break(element.xml):
+            #     page_number = page_number + 1
+            # if page_number in selected_pages:
+            #     merged_doc.element.body.append(element)
+            # elif not selected_pages:
+            #     merged_doc.element.body.append(element)
+            if element.tag == 'tbl':
+                merged_doc.element.body.append(element)
+                add_page_break(merged_doc)
+
+
+
+        # 수동으로 페이지 구분선 추가
         #add_page_break(merged_doc)
 
     # 문서 저장

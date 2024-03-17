@@ -1,8 +1,9 @@
 from merge_document.merge_docx import merge_docx
-from merge_document.merge_xlsx import merge_xlsx_multi_sheet, merge_xlsx_single_sheet
+from merge_document.merge_xlsx import merge_xlsx_multi_sheet, merge_xlsx_single_sheet, merge_xlsx_single_table
 import os
 
 if __name__ == "__main__":
+
     # file_list = []
     # docx_list = []
     # file_load(file_list)
@@ -26,6 +27,19 @@ if __name__ == "__main__":
     # ]
     # merge_xlsx_single_sheet(sheet_list, 'xlsx_sample/output_single_sheet.xlsx')
     # merge_xlsx_multi_sheet(sheet_list, 'xlsx_sample/output_multi_sheet.xlsx')
+
+    docx_list = ['docx_sample/test1.docx',
+                 'docx_sample/test2.docx']
+    # merge_docx(docx_list, 'docx_sample/output.docx')
+
+    sheet_list = [
+        ("xlsx_sample/test2.xlsx", "참여학사조직"),
+        ("xlsx_sample/test1.xlsx", "창원대")
+    ]
+    # merge_xlsx_single_sheet(sheet_list, 'xlsx_sample/output_single_sheet.xlsx')
+    # merge_xlsx_multi_sheet(sheet_list, 'xlsx_sample/output_multi_sheet.xlsx')
+    merge_xlsx_single_sheet(sheet_list, 'xlsx_sample/output_multi_sheet.xlsx')
+
 
 
 def file_load(file_list):
