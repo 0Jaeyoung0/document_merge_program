@@ -212,7 +212,7 @@ def add_page_break(doc):
 
     # <w:br w:type="page"/> element 생성
     br_element = OxmlElement('w:br')
-    br_element.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type', 'page')
+    #br_element.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type', 'page')
 
     # <w:r>에 <w:br> append
     run_element.append(br_element)
@@ -264,15 +264,20 @@ def merge_docx(file_list, output_file_name):
 
         # sub_doc의 body 엘리먼트를 merged_doc 파일의 body에 추가
         for element in sub_doc.element.body:
-            if check_page_break(element.xml):
-                page_number = page_number + 1
-            if page_number in selected_pages:
+            # if check_page_break(element.xml):
+            #     page_number = page_number + 1
+            # if page_number in selected_pages:
+            #     merged_doc.element.body.append(element)
+            # elif not selected_pages:
+            #     merged_doc.element.body.append(element)
+            if element.tag == 'tbl':
                 merged_doc.element.body.append(element)
-            elif not selected_pages:
-                merged_doc.element.body.append(element)
+                add_page_break(merged_doc)
+
+
 
         # 수동으로 페이지 구분선 추가
-        add_page_break(merged_doc)
+        #add_page_break(merged_doc)
 
     # 문서 저장
     merged_doc.save(output_file_name)
