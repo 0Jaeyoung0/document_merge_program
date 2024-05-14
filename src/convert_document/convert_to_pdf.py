@@ -37,3 +37,9 @@ class ToPdfConverter:
             self.excel2pdf(input_file, output_file)
         else:
             print("::ERROR::")
+
+if __name__ == '__main__':
+    converter = ToPdfConverter()
+    converter.convert_to_pdf('../handle_document/cover_page.docx', '../handle_document/cover_page.pdf')
+    converter.convert_to_pdf('../handle_document/index_page.docx', '../handle_document/index_page.pdf')
+

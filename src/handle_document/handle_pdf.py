@@ -24,7 +24,8 @@ class PdfHandler():
         new_pdf.drawCentredString(x=text_x, y=text_y, text=text)
         new_pdf.save()
 
-    def insert_page_number(self, input_file, output_file, start_page_number=1):
+    @staticmethod
+    def insert_page_number(input_file, output_file, start_page_number=1):
         output_pdf = PyPDF2.PdfWriter()
 
         with open(input_file, 'rb') as input_stream:
@@ -47,6 +48,66 @@ class PdfHandler():
         with open(output_file, 'wb') as output_stream:
             output_pdf.write(output_stream)
 
+    @staticmethod
+    def add_bookmark(input_file, title_array, page_num_array, output_file):
+        reader = PyPDF2.PdfReader(input_file)
+        writer = PyPDF2.PdfWriter()
+
+        page_num = 0
+
+        for page in range(len(reader.pages)):
+            writer.add_page(reader.pages[page])
+
+        for i in range(len(title_array)):
+            writer.add_outline_item(title_array[i], page_num)
+            page_num += page_num_array[i]
+
+        with open(output_file, "wb") as output_stream:
+            writer.write(output_stream)
+
+    @staticmethod
+    def extract_page_num(input_file):
+        pdf_reader = PyPDF2.PdfReader(input_file)
+
+        return len(pdf_reader.pages)
+
+    @staticmethod
+    def extract_page(input_pdf, document_file):
+        pdf_reader = PyPDF2.PdfReader(input_pdf)
+        pdf_writer = PyPDF2.PdfWriter()
+
+        load_file = os.path.basename(document_file)
+        if len(pdf_reader.pages) > 1:
+            user_input = input(
+                f"Enter the sheet number to save {load_file} [Total pages : {len(pdf_reader.pages)}] (separate with commas if multiple pages, press Enter to save the entire page): ")
+
+            if len(user_input) > 1:
+                selected_page = [int(num) - 1 for num in user_input.split(',')]
+                if len(selected_page) != len(set(selected_page)):
+                    print("Duplicate sheet number found")
+                else:
+                    for page_num in selected_page:
+                        try:
+                            pdf_writer.add_page(pdf_reader.pages[page_num])
+                            print(f"Saved page {page_num + 1}.")
+                        except IndexError:
+                            print("To save the entire page")
+                            for page in pdf_reader.pages:
+                                pdf_writer.add_page(page)
+
+            elif len(user_input) == 1:
+                pdf_writer.add_page(pdf_reader.pages[int(user_input) - 1])
+            else:
+                print("To save the entire page")
+                for page in pdf_reader.pages:
+                    pdf_writer.add_page(page)
+
+            with open(input_pdf, 'wb') as out:
+                pdf_writer.write(out)
+
+
 if __name__ == '__main__':
     handler = PdfHandler()
-    handler.insert_page_number('../../sample_data/pdf_sample/Sample C_01.pdf', '../../output.pdf')
+    handler.insert_page_number('../../output.pdf', '../../output2.pdf')
+    title_array = ['커버페이지', '목차페이지', 'Sample C_01.pdf', 'Sample C_02.pdf', 'Sample C_03.pdf']
+    handler.add_bookmark('../../output.pdf', )

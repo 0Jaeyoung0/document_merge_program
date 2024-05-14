@@ -271,7 +271,6 @@ class ExcelMerger:
 
 if __name__ == "__main__":
     merger = ExcelMerger()
-    sheet_list = [["xlsx_sample/test1.xlsx", "Sheet4", "Sheet2"]]
-    output_file_name = "xlsx_sample/output.xlsx"
-    # merger.merge_single_sheet(sheet_list, output_file_name)
-    merger.merge_single_table(sheet_list, output_file_name)
+    sheet_list = [["../../sample_data/xlsx_sample/test1.xlsx", "창원대"], ["../../sample_data/xlsx_sample/test0.xlsx", "참여학사조직"]]
+    output_file_name = "../../sample_data/xlsx_sample/output.xlsx"
+    merger.merge_single_sheet(sheet_list, output_file_name)
