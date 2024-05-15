@@ -11,101 +11,104 @@ import tempfile
 
 import os
 
-def btn_load_click():
-    global input_files
-    input_files = file_selector.open_files()
-    for file in input_files:
-        file_basename = os.path.basename(file)
-        listbox.insert(END, file_basename)
-    return input_files
+class App:
+    def __init__(self):
+        self.input_files = []
+        self.file_selector = file_io.FileIO()
+        self.to_pdf_converter = convert_to_pdf.ToPdfConverter()
+        self.pdf_handler = handle_pdf.PdfHandler()
+        self.word_handler = handle_docx.WordHandler()
+        self.pdf_merger = merge_pdf.PdfMerger()
 
-def btn_delete_click():
-    selected_items = listbox.curselection()
-    if askokcancel("Delete", f"Are you sure you want to delete it?"):
-        for i in reversed(selected_items):
-            listbox.delete(i)
-            del input_files[i]
+    def btn_load_click(self):
+        files = self.file_selector.open_files()
+        for file in files:
+            file_basename = os.path.basename(file)
+            self.input_files.append(file)
+            listbox.insert(END, file_basename)
 
-def btn_merge_click():
-    to_pdf_converter = convert_to_pdf.ToPdfConverter()
-    file_names_without_ext = []
-    converted_files = []
+    def btn_delete_click(self):
+        selected_items = listbox.curselection()
+        if askokcancel("Delete", f"Are you sure you want to delete it?"):
+            for i in reversed(selected_items):
+                listbox.delete(i)
+                del self.input_files[i]
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # 파일 일괄 변환
-        for index, input_file in enumerate(input_files, start=1):
-            # 임시 파일 경로 생성
-            file_name = os.path.basename(input_file)
-            file_name_without_ext = os.path.splitext(file_name)[0]  # 확장명을 제외한 파일명 가져오기
-            converted_file = os.path.join(temp_dir, f'{file_name_without_ext}.pdf')
+    def btn_merge_click(self):
+        file_names_without_ext = []
+        converted_files = []
 
-            to_pdf_converter.convert_to_pdf(input_file=input_file, output_file=converted_file)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # 파일 일괄 변환
+            for input_file in self.input_files:
+                # 임시 파일 경로 생성
+                file_name = os.path.basename(input_file)
+                file_name_without_ext = os.path.splitext(file_name)[0]  # 확장명을 제외한 파일명 가져오기
+                converted_file = os.path.join(temp_dir, f'{file_name_without_ext}.pdf')
 
-            file_names_without_ext.append(file_name_without_ext)
-            converted_files.append(converted_file)
+                self.to_pdf_converter.convert_to_pdf(input_file=input_file, output_file=converted_file)
 
-        # 각 파일 당 페이지 수 저장
-        pdf_handler = handle_pdf.PdfHandler()
-        files_page_num = []
+                file_names_without_ext.append(file_name_without_ext)
+                converted_files.append(converted_file)
 
-        for converted_file in converted_files:
-            page_num = pdf_handler.extract_page_num(converted_file)
-            files_page_num.append(page_num)
+            # 각 파일 당 페이지 수 저장
+            files_page_num = []
 
-        # 입력 받기
-        title = entry_title.get()
-        dept_name = entry_department.get()
-        person_name = entry_responsible.get()
+            for converted_file in converted_files:
+                page_num = self.pdf_handler.extract_page_num(converted_file)
+                files_page_num.append(page_num)
 
-        cover_page_docx_path = os.path.join(temp_dir, "cover_page.docx")
-        index_page_docx_path = os.path.join(temp_dir, "index_page.docx")
+            # 입력 받기
+            title = entry_title.get()
+            dept_name = entry_department.get()
+            person_name = entry_responsible.get()
 
-        # 커버, 목차 페이지 생성
-        word_handler = handle_docx.WordHandler()
-        word_handler.create_cover_page(title, dept_name, person_name, cover_page_docx_path)
-        word_handler.create_index_page(file_names_without_ext, files_page_num, index_page_docx_path)
+            cover_page_docx_path = os.path.join(temp_dir, "cover_page.docx")
+            index_page_docx_path = os.path.join(temp_dir, "index_page.docx")
 
-        cover_page_pdf_path = os.path.join(temp_dir, "cover_page.pdf")
-        index_page_pdf_path = os.path.join(temp_dir, "index_page.pdf")
+            # 커버, 목차 페이지 생성
+            self.word_handler.create_cover_page(title, dept_name, person_name, cover_page_docx_path)
+            self.word_handler.create_index_page(file_names_without_ext, files_page_num, index_page_docx_path)
 
-        # 커버, 목차 페이지 변환
-        to_pdf_converter.convert_to_pdf(cover_page_docx_path, cover_page_pdf_path)
-        to_pdf_converter.convert_to_pdf(index_page_docx_path, index_page_pdf_path)
+            cover_page_pdf_path = os.path.join(temp_dir, "cover_page.pdf")
+            index_page_pdf_path = os.path.join(temp_dir, "index_page.pdf")
 
-        # 커버, 목차 페이지 페이지 수 저장
-        cover_page_num = pdf_handler.extract_page_num(cover_page_pdf_path)
-        index_page_num = pdf_handler.extract_page_num(index_page_pdf_path)
+            # 커버, 목차 페이지 변환
+            self.to_pdf_converter.convert_to_pdf(cover_page_docx_path, cover_page_pdf_path)
+            self.to_pdf_converter.convert_to_pdf(index_page_docx_path, index_page_pdf_path)
 
-        # 커버, 목차 페이지를 배열 맨 앞으로 이동
-        converted_files.insert(0, index_page_pdf_path)
-        converted_files.insert(0, cover_page_pdf_path)
+            # 커버, 목차 페이지 페이지 수 저장
+            cover_page_num = self.pdf_handler.extract_page_num(cover_page_pdf_path)
+            index_page_num = self.pdf_handler.extract_page_num(index_page_pdf_path)
 
-        # 커버, 목차 페이지 수를 배열 맨 앞으로 이동
-        files_page_num.insert(0, index_page_num)
-        files_page_num.insert(0, cover_page_num)
+            # 커버, 목차 페이지를 배열 맨 앞으로 이동
+            converted_files.insert(0, index_page_pdf_path)
+            converted_files.insert(0, cover_page_pdf_path)
 
-        merged_file = os.path.join(temp_dir, "merged.pdf")
+            # 커버, 목차 페이지 수를 배열 맨 앞으로 이동
+            files_page_num.insert(0, index_page_num)
+            files_page_num.insert(0, cover_page_num)
 
-        # 파일 일괄 병합
-        pdf_merger = merge_pdf.PdfMerger()
-        pdf_merger.merge_pdf(input_files=converted_files, output_file=merged_file)
+            merged_file = os.path.join(temp_dir, "merged.pdf")
 
-        page_file = os.path.join(temp_dir, "page.pdf")
+            # 파일 일괄 병합
+            self.pdf_merger.merge_pdf(input_files=converted_files, output_file=merged_file)
 
-        # 페이지 번호 추가
-        pdf_handler.insert_page_number(merged_file, page_file, 1)
+            page_file = os.path.join(temp_dir, "page.pdf")
 
-        output_file = file_selector.save_file()
+            # 페이지 번호 추가
+            self.pdf_handler.insert_page_number(merged_file, page_file, 1)
 
-        # 북마크 추가
-        file_names_without_ext.insert(0, "index_page")
-        file_names_without_ext.insert(0, "cover_page")
-        pdf_handler.add_bookmark(page_file, file_names_without_ext, files_page_num, output_file)
+            output_file = self.file_selector.save_file()
+
+            # 북마크 추가
+            file_names_without_ext.insert(0, "index_page")
+            file_names_without_ext.insert(0, "cover_page")
+            self.pdf_handler.add_bookmark(page_file, file_names_without_ext, files_page_num, output_file)
+
 
 if __name__ == '__main__':
-    file_selector = file_io.FileIO()
-    to_pdf_converter = convert_to_pdf.ToPdfConverter()
-    pdf_merger = merge_pdf.PdfMerger()
+    app = App()
 
     root = Tk()
     root.title("N&M")
@@ -125,9 +128,9 @@ if __name__ == '__main__':
     # 버튼
     btn_frame = Frame(right_frame)
     btn_frame.pack(side=TOP, pady=10)
-    btn_load = Button(btn_frame, text='파일 로드', width=9, font=("Arial", 12), command=btn_load_click)
-    btn_delete = Button(btn_frame, text='파일 삭제', width=9, font=("Arial", 12), command=btn_delete_click)
-    btn_merge = Button(right_frame, text='파일 병합', width=12, font=("Arial", 12), command=btn_merge_click)
+    btn_load = Button(btn_frame, text='파일 로드', width=9, font=("Arial", 12), command=app.btn_load_click)
+    btn_delete = Button(btn_frame, text='파일 삭제', width=9, font=("Arial", 12), command=app.btn_delete_click)
+    btn_merge = Button(right_frame, text='파일 병합', width=12, font=("Arial", 12), command=app.btn_merge_click)
     btn_load.pack(side=LEFT, padx=5)
     btn_delete.pack(side=LEFT, padx=5)
     btn_merge.pack(side=BOTTOM, pady=10)

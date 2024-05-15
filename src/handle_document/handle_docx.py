@@ -2,7 +2,7 @@ from docx import Document
 from docx.shared import Inches, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-class WordHandler(object):
+class WordHandler():
     def __init__(self):
         pass
 
