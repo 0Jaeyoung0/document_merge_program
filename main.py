@@ -14,6 +14,7 @@ import os
 class App:
     def __init__(self):
         self.input_files = []
+        self.selected_pages = []
         self.file_selector = file_io.FileIO()
         self.to_pdf_converter = convert_to_pdf.ToPdfConverter()
         self.pdf_handler = handle_pdf.PdfHandler()
@@ -40,13 +41,24 @@ class App:
 
         with tempfile.TemporaryDirectory() as temp_dir:
             # 파일 일괄 변환
-            for input_file in self.input_files:
+            for input_file, selected_page in self.input_files, self.selected_pages:
                 # 임시 파일 경로 생성
                 file_name = os.path.basename(input_file)
                 file_name_without_ext = os.path.splitext(file_name)[0]  # 확장명을 제외한 파일명 가져오기
                 converted_file = os.path.join(temp_dir, f'{file_name_without_ext}.pdf')
 
-                self.to_pdf_converter.convert_to_pdf(input_file=input_file, output_file=converted_file)
+                if input_file.endswith('.doc') or input_file.endswith('.docx'):
+                    self.to_pdf_converter.word2pdf(input_file, converted_file)
+
+                    if selected_page != 0:
+                        self.pdf_handler.extract_page(converted_file, selected_page, converted_file)
+                elif input_file.endswith('.xls') or input_file.endswith('.xlsx'):
+                    if selected_page != 0:
+                        self.to_pdf_converter.excel2pdf(input_file, converted_file, selected_page)
+                    else:
+                        self.to_pdf_converter.excel2pdf(input_file, converted_file)
+                else:
+                    print("error")
 
                 file_names_without_ext.append(file_name_without_ext)
                 converted_files.append(converted_file)

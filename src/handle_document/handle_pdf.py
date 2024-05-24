@@ -1,3 +1,5 @@
+import sys
+
 import PyPDF2
 from reportlab.pdfgen import canvas
 import os
@@ -72,42 +74,18 @@ class PdfHandler():
         return len(pdf_reader.pages)
 
     @staticmethod
-    def extract_page(input_pdf, document_file):
-        pdf_reader = PyPDF2.PdfReader(input_pdf)
+    def extract_page(input_file, selected_page, output_file):
+        pdf_reader = PyPDF2.PdfReader(input_file)
         pdf_writer = PyPDF2.PdfWriter()
 
-        load_file = os.path.basename(document_file)
-        if len(pdf_reader.pages) > 1:
-            user_input = input(
-                f"Enter the sheet number to save {load_file} [Total pages : {len(pdf_reader.pages)}] (separate with commas if multiple pages, press Enter to save the entire page): ")
+        for page_num in selected_page:
+            pdf_writer.add_page(pdf_reader.pages[page_num])  # 0부터 첫페이지임
 
-            if len(user_input) > 1:
-                selected_page = [int(num) - 1 for num in user_input.split(',')]
-                if len(selected_page) != len(set(selected_page)):
-                    print("Duplicate sheet number found")
-                else:
-                    for page_num in selected_page:
-                        try:
-                            pdf_writer.add_page(pdf_reader.pages[page_num])
-                            print(f"Saved page {page_num + 1}.")
-                        except IndexError:
-                            print("To save the entire page")
-                            for page in pdf_reader.pages:
-                                pdf_writer.add_page(page)
+        pdf_writer.write(output_file)
 
-            elif len(user_input) == 1:
-                pdf_writer.add_page(pdf_reader.pages[int(user_input) - 1])
-            else:
-                print("To save the entire page")
-                for page in pdf_reader.pages:
-                    pdf_writer.add_page(page)
-
-            with open(input_pdf, 'wb') as out:
-                pdf_writer.write(out)
 
 
 if __name__ == '__main__':
     handler = PdfHandler()
-    handler.insert_page_number('../../output.pdf', '../../output2.pdf')
-    title_array = ['커버페이지', '목차페이지', 'Sample C_01.pdf', 'Sample C_02.pdf', 'Sample C_03.pdf']
-    handler.add_bookmark('../../output.pdf', )
+    selected_page = [1, 3]
+    handler.extract_page(input_file='../../sample_data/pdf_sample/Sample C_01.pdf', selected_page=selected_page, output_file='../../sample_data/pdf_sample/test.pdf')

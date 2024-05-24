@@ -12,9 +12,9 @@ class ToPdfConverter:
             self.excel.Quit()
 
     def word2pdf(self, input_file, output_file):
-        doc_file = input_file.replace('/', '\\')
         wdExportFormatPDF = 17
 
+        doc_file = input_file.replace('/', '\\')
         doc = self.word.Documents.Open(doc_file)
 
         doc.ExportAsFixedFormat(output_file, wdExportFormatPDF)
