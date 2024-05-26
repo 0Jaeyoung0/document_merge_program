@@ -21,6 +21,23 @@ class App:
         self.word_handler = handle_docx.WordHandler()
         self.pdf_merger = merge_pdf.PdfMerger()
 
+    @staticmethod
+    def parse_num_ranges(text):
+        nums = []
+        ranges = text.split(',')
+        for r in ranges:
+            r = r.strip()
+            if '-' in r:
+                start, end = map(int, r.split('-'))
+                nums.extend(range(start, end + 1))
+            else:
+                nums.append(int(r))
+        return nums
+
+    @staticmethod
+    def decrement_array(arr):
+        return [x - 1 for x in arr]
+
     def btn_load_click(self):
         files = self.file_selector.open_files()
         for file in files:
@@ -51,7 +68,9 @@ class App:
                     self.to_pdf_converter.word2pdf(input_file, converted_file)
 
                     if selected_page != 0:
-                        self.pdf_handler.extract_page(converted_file, selected_page, converted_file)
+                        page_array = App.parse_num_ranges(selected_page)
+                        decremented_array = App.decrement_array(page_array)
+                        self.pdf_handler.extract_page(converted_file, decremented_array, converted_file)
                 elif input_file.endswith('.xls') or input_file.endswith('.xlsx'):
                     if selected_page != 0:
                         self.to_pdf_converter.excel2pdf(input_file, converted_file, selected_page)
