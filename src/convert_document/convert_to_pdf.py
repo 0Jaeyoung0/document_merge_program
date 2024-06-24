@@ -27,10 +27,10 @@ class ToPdfConverter:
         wb = self.excel.Workbooks.Open(input_file)
 
         if sheet_name is None:
+            wb.ExportAsFixedFormat(xlExportFormatPDF, output_file)
+        else:
             ws = wb.Worksheets(sheet_name)
             ws.ExportAsFixedFormat(xlExportFormatPDF, output_file)
-        else:
-            wb.ExportAsFixedFormat(xlExportFormatPDF, output_file)
 
         wb.Close()
 
