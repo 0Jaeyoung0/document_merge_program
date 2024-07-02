@@ -9,16 +9,21 @@ from tkinter import *
 from tkinter.messagebox import askokcancel
 from tkinter import messagebox
 import tkinter as tk
-from tkinter.ttk import Combobox
+from tkinter.ttk import Combobox, Progressbar
 
 import tempfile
-
+import shutil
+import sys
 import os
 import re
 
 
 class App:
     def __init__(self):
+        self.root = tk.Tk()
+        self.pg_var = DoubleVar()
+        self.progress_bar = Progressbar(self.root, maximum=100, length=150, orient='horizontal', mode='determinate', variable=self.pg_var)
+
         self.input_files = []
         self.selected_pages = []
         self.index = 0
@@ -30,17 +35,13 @@ class App:
         self.excel_handler = handle_xlsx.ExcelHandler()
         self.pdf_merger = merge_pdf.PdfMerger()
 
-        # Initialize UI elements
-        self.initialize_ui()
-
     def initialize_ui(self):
         self.create_root_window()
         self.create_left_frame()
         self.create_right_frame()
-        #self.bind_events()
+        self.bind_events()
 
     def create_root_window(self):
-        self.root = tk.Tk()
         self.root.title("N&M")
         self.root.resizable(width=False, height=False)
         self.root.geometry("600x400+100+100")
@@ -67,18 +68,8 @@ class App:
         self.labelframe = tk.LabelFrame(parent, text="페이지 선택", relief='solid', bd=1, pady=10)
         self.labelframe.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
 
-        # self.create_radio_buttons(labelframe)
-        # self.create_entry_and_combobox(labelframe)
-
-    def create_labelframe_child(self, parent, ext):
-        if ext == ".docx" or ext == ".doc":
-            self.all_radio = tk.Radiobutton(parent, text="ALL")
-            self.part_radio = tk.Radiobutton(parent, text="PART")
-            self.input_text = tk.Entry(parent, width=10, state='disabled')
-
-            self.all_radio.select()
-            self.part_radio.deselect()
-
+        self.create_radio_buttons(self.labelframe)
+        self.create_entry_and_combobox(self.labelframe)
 
     def create_radio_buttons(self, parent):
         self.var1 = tk.IntVar()
@@ -119,10 +110,16 @@ class App:
         lbl_responsible.grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
         self.entry_responsible.grid(row=2, column=1, padx=5, pady=5)
 
+    def exit_window_x(self):
+        print("프로그램이 종료됩니다.")
+        self.root.destroy()
+        sys.exit()
+
     def bind_events(self):
         self.listbox.bind('<<ListboxSelect>>', self.listbox_select)
         self.input_text.bind("<Return>", self.order_input_page)
         self.combo.bind("<<ComboboxSelected>>", self.order_input_worksheet)
+        self.root.protocol('WM_DELETE_WINDOW', self.exit_window_x)
 
     @staticmethod
     def extract_filename_without_extension(file_path):
@@ -156,6 +153,13 @@ class App:
                 page_array = self.parse_num_ranges(selected_page)
                 decremented_array = self.decrement_array(page_array)
                 self.pdf_handler.extract_page(output_file, decremented_array, output_file)
+        elif input_file.endswith('.pdf'):
+            if selected_page != 0:
+                page_array = self.parse_num_ranges(selected_page)
+                decremented_array = self.decrement_array(page_array)
+                self.pdf_handler.extract_page(input_file, decremented_array, output_file)
+            else:
+                shutil.copyfile(input_file, output_file)
         elif input_file.endswith('.xls') or input_file.endswith('.xlsx'):
             if selected_page != 0:
                 self.to_pdf_converter.excel2pdf(input_file, output_file, selected_page)
@@ -168,6 +172,9 @@ class App:
         converted_files = []
         file_names_without_ext = []
 
+        i = 20 / len(self.input_files)
+        value = 0
+
         # 파일 일괄 변환
         for input_file, selected_page in zip(self.input_files, self.selected_pages):
             file_name_without_ext = self.extract_filename_without_extension(input_file)  # 확장명을 제외한 파일명 가져오기
@@ -177,6 +184,9 @@ class App:
 
             file_names_without_ext.append(file_name_without_ext)
             converted_files.append(converted_file)
+
+            self.update_progress_bar(value)
+            value += i
 
         return converted_files, file_names_without_ext
 
@@ -232,47 +242,78 @@ class App:
         self.pdf_handler.insert_page_number(merged_file_path, numbering_file_path, 1)
         return numbering_file_path
 
-    def add_bookmarks(self, numbering_file_path, file_names_without_ext, files_page_num, output_file_path):
+    def add_bookmarks(self, numbering_file_path, file_names_without_ext, files_page_num, temp_dir):
+        bookmark_file_path = os.path.join(temp_dir, "page.pdf")
         file_names_without_ext.insert(0, "index_page")
         file_names_without_ext.insert(0, "cover_page")
-        self.pdf_handler.add_bookmark(numbering_file_path, file_names_without_ext, files_page_num, output_file_path)
+        self.pdf_handler.add_bookmark(numbering_file_path, file_names_without_ext, files_page_num, bookmark_file_path)
+        return bookmark_file_path
+
+    def update_progress_bar(self, value):
+        self.pg_var.set(value)
+        self.progress_bar.update()
+
+    def create_progressbar_window(self):
+        self.progress_win = Toplevel(self.root)
+        self.progress_win.title("Merging Files...")
+        self.progress_win.geometry("+200+200")
+
+        self.pg_var = DoubleVar()
+        self.progress_bar = Progressbar(self.progress_win, orient="horizontal", length=300, mode='determinate',
+                                        variable=self.pg_var, maximum=100)
+        self.progress_bar.pack()
 
     def btn_merge_click(self):
+        self.create_progressbar_window()
+
+        self.update_progress_bar(0)
+
         # output을 제외한 모든 임시 파일들은 temp_dir에 저장 후 병합 종료 시 폴더 삭제
         with tempfile.TemporaryDirectory() as temp_dir:
             # 입력 파일 변환
             converted_files, file_names_without_ext = self.convert_files(temp_dir)
             # 각 파일 당 페이지 수 저장
             files_page_num = self.get_page_numbers(converted_files)
+            self.update_progress_bar(30)
             # 커퍼 페이지 및 목차 페이지 생성
             cover_page_pdf_path, index_page_pdf_path = self.create_cover_and_index_pages(temp_dir, file_names_without_ext, files_page_num)
+            self.update_progress_bar(40)
             # 커퍼 페이지 및 목차 페이지를 변환된 파일들 맨 앞에 추가
             converted_files = self.insert_cover_and_index_pages(converted_files, cover_page_pdf_path, index_page_pdf_path)
+            self.update_progress_bar(50)
             # 커버 페이지 및 목차 페이지의 페이지 수를 변환된 파일들의 페이지 수의 맨 앞에 추가
             files_page_num = self.insert_cover_and_index_page_numbers(files_page_num, cover_page_pdf_path, index_page_pdf_path)
+            self.update_progress_bar(60)
             # 하나의 pdf로 병합
             merged_file_path = self.merge_files(converted_files, temp_dir)
+            self.update_progress_bar(80)
             # 병합된 pdf에 번호 추가
             numbering_file_path = self.insert_page_numbers(merged_file_path, temp_dir)
+            self.update_progress_bar(90)
+            # 북마크 추가
+            bookmark_file_path = self.add_bookmarks(numbering_file_path, file_names_without_ext, files_page_num, temp_dir)
+            self.update_progress_bar(100)
             # 저장 경로 선택
             output_file = self.file_selector.save_file()
-            # 북마크 추가 후 최종 저장
-            self.add_bookmarks(numbering_file_path, file_names_without_ext, files_page_num, output_file)
-        # 저장 알림
-        self.info_msg("Merge complete")
+            # 사용자 지정 경로 복사
+            shutil.copyfile(bookmark_file_path, output_file)
+
+        self.progress_win.destroy()
 
     def btn_load_click(self):
         files = self.file_selector.open_files()
+        new_files_count = 0
         for file in files:
-            if file.endswith((".docx", ".doc", ".xlsx", ".xls")):
+            if file.endswith((".docx", ".doc", ".xlsx", ".xls", ".pdf")):
                 self.input_files.append(file)
                 self.listbox.insert(END, os.path.basename(file))
+                new_files_count += 1
             else:
                 self.warning_msg(
-                    f"Only Ms Word & Ms Excel files supported\nUnsupported file format : {os.path.basename(file)}")
+                    f"Only \".docx\", \".doc\", \".xlsx\", \".xls\", \".pdf\" files supported\nUnsupported file format : {os.path.basename(file)}")
 
         if self.selected_pages:
-            self.selected_pages.extend([0])
+            self.selected_pages.extend([0] * new_files_count)
         else:
             self.selected_pages = [0] * len(self.input_files)
 
@@ -302,7 +343,9 @@ class App:
         # Initialization
         self.input_text.delete(0, tk.END)
         self.input_text.config(state='disabled')  # input_text 비활성화
+
         self.combo.set("-- SELECT --")
+        self.combo.config(state='disabled')  # input_text 비활성화
         self.selected_pages[self.index] = 0
 
     def radio_button_2(self):
@@ -323,18 +366,24 @@ class App:
         self.radio3.select()
 
         # Initialization
-        self.input_text.config(state='normal')  # input_text 활성화
+        self.combo.config(state='normal')  # input_text 활성화
         if not self.selected_pages:
             self.combo.set(self.selected_pages[self.index])
-            self.radio3.select()
 
         elif self.selected_pages[self.index] == 0:
             self.combo.set("-- SELECT --")
 
     # Binding Method ---------------------------------------------------------------------------------------------------
     def is_vaild_input(self, input_value):
-        pattern = r'^([1-9]\d*)(,\s*\d+(-\d+)?)*$'
+        pattern = r'^(\d+)(-\d+)?(,\s*(\d+)(-\d+)?)*$'
         if re.match(pattern, input_value):
+            ranges = input_value.split(',')
+            for range_str in ranges:
+                range_parts = range_str.split('-')
+                if len(range_parts) == 2:
+                    start, end = map(int, range_parts)
+                    if start > end:
+                        return False
             return True
         else:
             return False
@@ -354,80 +403,93 @@ class App:
 
     def order_input_worksheet(self, event):
     # Method of the combo box corresponding to the corresponding function of radio button 3
-
+        print(f"Index : {self.index}")
         sheet_value = self.combo.get()
         print(f"The page entered by the user : {sheet_value}")
 
         # Unlike other widgets, the combo box does not keep the cursor in the list box,
         # so it gets the list box recorded in Radio Box 3 (self.index)
-        if self.index:
-            if sheet_value:
-                self.selected_pages[self.index] = self.combo.get()
-            else:
-                self.selected_pages[self.index] = 0
+
+        if sheet_value:
+            self.selected_pages[self.index] = self.combo.get()
+        else:
+            self.selected_pages[self.index] = 0
 
     def listbox_select(self, event):
         selected_item, index = self.get_selected_item_and_index()
-        if selected_item and index is not None:
+        if selected_item or (index is not None and int(index) > -1):
             self.index = index
+            print(selected_item)
             print(f"Current cursor position : {index}")
-            if selected_item.endswith('.docx') or selected_item.endswith('.doc'):
+            self.radio1.pack_forget()
+            self.radio2.pack_forget()
+            self.radio3.pack_forget()
+            self.input_text.pack_forget()
+            self.label2.pack_forget()
+            self.combo.pack_forget()
+            if selected_item.endswith('.docx') or selected_item.endswith('.doc') or selected_item.endswith('.pdf'):
                 self.handle_word_file_selection(index)
             elif selected_item.endswith('.xlsx') or selected_item.endswith('.xls'):
                 self.handle_excel_file_selection(index)
             else:
-                self.warning_msg(f"Only Ms Word & Ms Excel files supported\nUnsupported file format : {selected_item}")
-        else:
-            self.warning_msg("Please select a file from the list.")
+                self.warning_msg(f"Only \".docx\", \".doc\", \".xlsx\", \".xls\", \".pdf\" files supported\nUnsupported file format : {selected_item}")
+
         print(f"Page related array : {self.selected_pages}")
 
     def get_selected_item_and_index(self):
-        selected_item = self.listbox.get(tk.ACTIVE)
         selected_indices = self.listbox.curselection()
         if selected_indices:
             index = selected_indices[0]
+            selected_item = self.listbox.get(index)
             return selected_item, index
         return None, None
 
     def handle_word_file_selection(self, index):
+        self.radio1.pack(side=tk.LEFT, padx=5)
         self.radio2.pack(side=tk.LEFT, padx=5)
         self.input_text.pack(side=tk.LEFT, padx=5)
         self.label2.pack(side=tk.LEFT, padx=5)
-        self.combo.pack_forget()
-        self.radio3.pack_forget()
 
         if self.selected_pages[index] == 0:
             self.radio1.select()
             self.input_text.delete(0, tk.END)
+            self.input_text.config(state='disabled')
         else:
             self.radio2.select()
+            self.input_text.config(state='normal')
             self.input_text.delete(0, tk.END)  # 기존 값 삭제
             self.input_text.insert(0, self.selected_pages[index])
 
     def handle_excel_file_selection(self, index):
+        self.radio1.pack(side=tk.LEFT, padx=5)
         self.radio3.pack(side=tk.LEFT, padx=5)
         self.combo.pack(side=tk.LEFT, padx=5)
-        self.radio2.pack_forget()
-        self.input_text.pack_forget()
-        self.label2.pack_forget()
 
         worksheet_names = []
+        self.radio1.select()
+        self.combo.set("-- SELECT --")
+        self.combo.config(state='disabled')
+
         try:
             worksheet_names = self.excel_handler.extract_sheet_names(self.input_files[index])
             self.combo['values'] = worksheet_names
-            self.combo.config(state="readonly")
         except Exception as e:
             print(f"Error: {e}")
             self.warning_msg("Invalid file format. Only Excel files are supported for worksheets.")
 
-        if self.selected_pages[index] in worksheet_names:
+
+        if self.selected_pages[index] != 0 or self.selected_pages[index] in worksheet_names:
+            self.radio3.select()
+            self.combo.config(state='normal')
             self.combo.set(self.selected_pages[index])
         else:
+            self.radio1.select()
+            self.combo.config(state='disabled')
             self.combo.set("-- SELECT --")
 
     def run(self):
+        self.initialize_ui()
         self.root.mainloop()
-
 
 if __name__ == '__main__':
     app = App()

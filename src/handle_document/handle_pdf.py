@@ -1,5 +1,3 @@
-import sys
-
 import PyPDF2
 from reportlab.pdfgen import canvas
 import os
@@ -79,7 +77,7 @@ class PdfHandler():
         pdf_writer = PyPDF2.PdfWriter()
 
         for page_num in selected_page:
-            pdf_writer.add_page(pdf_reader.pages[page_num])  # 0부터 첫페이지임
+            pdf_writer.add_page(pdf_reader.pages[page_num])                           # 0부터 첫페이지임
 
         pdf_writer.write(output_file)
 

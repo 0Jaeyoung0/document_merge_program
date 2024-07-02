@@ -70,20 +70,29 @@ class WordHandler():
                 heading_cells[i].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         # content cell
-        row = table.rows[1]
-        total_page_num = 3 # title page + index page + first page + ..
+        title_page_num = 1
+        expected_index_page_num = 1
+        index_num = len(files_description)
+
+        if index_num > 31:
+            expected_index_page_num += 1
+            index_num -= 31
+            expected_index_page_num += (index_num - 1) // 34
+
+        start_page_num = title_page_num + expected_index_page_num + 1
+
         for i in range(1, num_files + 1):
             row = table.rows[i]
             row.cells[0].text = f'{i}'
             row.cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
             row.cells[1].text = files_description[i - 1]
-            if total_page_num < 10 and total_page_num + int(files_pages[i - 1]) < 10:
-                row.cells[2].text = f'0{total_page_num}~0{total_page_num + int(files_pages[i - 1]-1)}'
+            if start_page_num < 10 and start_page_num + int(files_pages[i - 1]) < 10:
+                row.cells[2].text = f'0{start_page_num}~0{start_page_num + int(files_pages[i - 1]-1)}'
             else:
-                row.cells[2].text = f'{total_page_num:02}~{total_page_num + int(files_pages[i - 1]-1):02}'
+                row.cells[2].text = f'{start_page_num:02}~{start_page_num + int(files_pages[i - 1]-1):02}'
 
             row.cells[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-            total_page_num = total_page_num + int(files_pages[i - 1])
+            start_page_num = start_page_num + int(files_pages[i - 1])
         document.save(output_file)
 
 if __name__ == '__main__':
